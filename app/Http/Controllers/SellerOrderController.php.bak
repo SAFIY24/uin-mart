@@ -1,0 +1,350 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Order;
+use App\Models\SellerApplication;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+
+class SellerOrderController extends Controller
+{
+    private function ensureApprovedSeller(Request $request): void
+    {
+        abort_unless($request->user(), 401);
+
+        $approved = SellerApplication::query()
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'approved')
+            ->exists();
+
+        abort_unless(
+            $approved,
+            403,
+            'Akun penjual belum disetujui.'
+        );
+    }
+
+    // Daftar pesanan yang berisi produk Seller.
+    public function index(Request $request)
+    {
+        $this->ensureApprovedSeller($request);
+
+        $sellerId = $request->user()->id;
+
+        $orders = Order::query()
+            ->whereHas('items', function ($query) use ($sellerId) {
+                $query->where('seller_id', $sellerId);
+            })
+            ->with([
+                'items' => function ($query) use ($sellerId) {
+                    $query->where('seller_id', $sellerId);
+                },
+            ])
+            ->latest('id')
+            ->paginate(10);
+
+        $orders->getCollection()->each(function ($order) use ($sellerId) {
+            $order->seller_quantity = $order->items->sum('quantity');
+            $order->seller_subtotal = $order->items->sum('subtotal');
+
+            $order->seller_fulfillment = DB::table(
+                'seller_order_fulfillments'
+            )
+                ->where('order_id', $order->id)
+                ->where('seller_id', $sellerId)
+                ->first();
+        });
+
+        $sellerOrders = Order::query()
+            ->whereHas('items', function ($query) use ($sellerId) {
+                $query->where('seller_id', $sellerId);
+            });
+
+        $totalOrders = (clone $sellerOrders)->count();
+
+        $pendingOrders = DB::table('seller_order_fulfillments')
+            ->join(
+                'orders',
+                'orders.id',
+                '=',
+                'seller_order_fulfillments.order_id'
+            )
+            ->where('seller_order_fulfillments.seller_id', $sellerId)
+            ->where('seller_order_fulfillments.status', 'pending')
+            ->where('orders.order_status', '!=', 'cancelled')
+            ->count();
+
+        $completedOrders = DB::table('seller_order_fulfillments')
+            ->where('seller_id', $sellerId)
+            ->where('status', 'completed')
+            ->count();
+
+        return view('seller.orders.index', compact(
+            'orders',
+            'totalOrders',
+            'pendingOrders',
+            'completedOrders'
+        ));
+    }
+
+    // Detail pesanan: hanya produk milik Seller.
+    public function show(Request $request, Order $order)
+    {
+        $this->ensureApprovedSeller($request);
+
+        $sellerId = $request->user()->id;
+
+        $sellerItems = $order->items()
+            ->where('seller_id', $sellerId)
+            ->get();
+
+        abort_if(
+            $sellerItems->isEmpty(),
+            403,
+            'Anda tidak memiliki akses ke pesanan ini.'
+        );
+
+        $sellerQuantity = $sellerItems->sum('quantity');
+        $sellerSubtotal = $sellerItems->sum('subtotal');
+
+        $fulfillment = DB::table('seller_order_fulfillments')
+            ->where('order_id', $order->id)
+            ->where('seller_id', $sellerId)
+            ->first();
+
+        return view('seller.orders.show', compact(
+            'order',
+            'sellerItems',
+            'sellerQuantity',
+            'sellerSubtotal',
+            'fulfillment'
+        ));
+    }
+
+    // Perubahan status pengiriman milik Seller.
+    private function transition(
+        Request $request,
+        Order $order,
+        string $from,
+        string $to,
+        string $message,
+        array $additional = []
+    ) {
+        $this->ensureApprovedSeller($request);
+
+        $sellerId = (int) $request->user()->id;
+
+        DB::transaction(function () use (
+            $order,
+            $sellerId,
+            $from,
+            $to,
+            $additional
+        ) {
+            // Kunci pesanan agar pembatalan/perubahan
+            // yang menggunakan kunci serupa tidak bersamaan.
+            $currentOrder = Order::query()
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (in_array(
+                $currentOrder->order_status,
+                ['cancelled', 'completed'],
+                true
+            )) {
+                throw ValidationException::withMessages([
+                    'delivery' => 'Pesanan sudah dibatalkan atau selesai.',
+                ]);
+            }
+
+            // Pastikan pesanan benar-benar memiliki
+            // item yang dibeli dari Seller ini.
+            $ownsItems = $currentOrder->items()
+                ->where('seller_id', $sellerId)
+                ->exists();
+
+            abort_unless(
+                $ownsItems,
+                403,
+                'Anda tidak memiliki akses ke pesanan ini.'
+            );
+
+            // Kunci data pengiriman Seller ini saja.
+            $fulfillment = DB::table('seller_order_fulfillments')
+                ->where('order_id', $currentOrder->id)
+                ->where('seller_id', $sellerId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$fulfillment) {
+                throw ValidationException::withMessages([
+                    'delivery' => 'Data pengiriman belum tersedia untuk pesanan ini.',
+                ]);
+            }
+
+            if ($fulfillment->status !== $from) {
+                throw ValidationException::withMessages([
+                    'delivery' => 'Status pengiriman sudah berubah. Muat ulang halaman.',
+                ]);
+            }
+
+            DB::table('seller_order_fulfillments')
+                ->where('id', $fulfillment->id)
+                ->update(array_merge(
+                    [
+                        'status' => $to,
+                        'updated_at' => now(),
+                    ],
+                    $additional
+                ));
+        });
+
+        return redirect()
+            ->route('seller.orders.show', $order)
+            ->with('success', $message);
+    }
+
+    // 1. Konfirmasi pesanan.
+    public function confirm(Request $request, Order $order)
+    {
+        return $this->transition(
+            $request,
+            $order,
+            'pending',
+            'confirmed',
+            'Pesanan berhasil dikonfirmasi.',
+            ['confirmed_at' => now()]
+        );
+    }
+
+    // 2. Mulai menyiapkan produk.
+    public function prepare(Request $request, Order $order)
+    {
+        return $this->transition(
+            $request,
+            $order,
+            'confirmed',
+            'preparing',
+            'Produk sedang dipersiapkan.'
+        );
+    }
+
+    // 3. Produk sudah siap.
+    public function ready(Request $request, Order $order)
+    {
+        return $this->transition(
+            $request,
+            $order,
+            'preparing',
+            'ready',
+            'Produk siap dikirim atau diambil.'
+        );
+    }
+
+    // 4. Seller telah menyerahkan produk.
+    public function handover(Request $request, Order $order)
+    {
+        return $this->transition(
+            $request,
+            $order,
+            'ready',
+            'handed_over',
+            'Barang ditandai sudah diserahkan. Menunggu konfirmasi pembeli.',
+            ['handed_over_at' => now()]
+        );
+    }
+
+
+    // Seller mengajukan atau mengubah jadwal pengiriman.
+    public function proposeSchedule(Request $request, Order $order)
+    {
+        $this->ensureApprovedSeller($request);
+
+        $data = $request->validate([
+            'scheduled_at' => [
+                'required',
+                'date_format:Y-m-d\TH:i',
+                'after:now',
+            ],
+            'schedule_note' => 'nullable|string|max:1000',
+        ]);
+
+        $sellerId = (int) $request->user()->id;
+
+        DB::transaction(function () use ($order, $sellerId, $data) {
+            $currentOrder = Order::query()
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (in_array(
+                $currentOrder->order_status,
+                ['cancelled', 'completed'],
+                true
+            )) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'scheduled_at' => 'Pesanan sudah ditutup.',
+                ]);
+            }
+
+            $ownsItems = $currentOrder->items()
+                ->where('seller_id', $sellerId)
+                ->exists();
+
+            abort_unless($ownsItems, 403);
+
+            $fulfillment = DB::table('seller_order_fulfillments')
+                ->where('order_id', $currentOrder->id)
+                ->where('seller_id', $sellerId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$fulfillment) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'scheduled_at' => 'Data pengiriman tidak ditemukan.',
+                ]);
+            }
+
+            if (
+                !in_array($fulfillment->status, [
+                    'pending',
+                    'confirmed',
+                    'preparing',
+                    'ready',
+                ], true)
+                || !in_array($fulfillment->schedule_status, [
+                    'not_proposed',
+                    'proposed',
+                    'change_requested',
+                    'confirmed',
+                ], true)
+            ) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'scheduled_at' => 'Jadwal tidak dapat diubah pada status ini.',
+                ]);
+            }
+
+ 
+DB::table('seller_order_fulfillments')
+    ->where('id', $fulfillment->id)
+    ->update([
+        'scheduled_at' => $data['scheduled_at'],
+        'schedule_note' => $data['schedule_note'] ?? null,
+        'schedule_status' => 'confirmed',
+        'schedule_change_reason' => null,
+        'schedule_confirmed_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+        });
+
+        return redirect()
+            ->route('seller.orders.show', $order)
+           ->with('success', 'Jadwal pengiriman berhasil disimpan.');
+    }
+
+
+}

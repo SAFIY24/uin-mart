@@ -1,0 +1,193 @@
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\{Product, Order};
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+class CheckoutController extends Controller
+{
+    // MUA NGAY
+    public function buyNow(Request $request)
+    {
+        $data = $request->validate([
+            'product_id' => 'required|integer|exists:products,id',
+            'quantity' => 'required|integer|min:1|max:999',
+        ]);
+
+        $product = Product::where('status', 'active')
+            ->findOrFail($data['product_id']);
+
+        if ($data['quantity'] > $product->stock) {
+            return back()->withErrors([
+                'stock' => 'Stok tidak mencukupi.'
+            ]);
+        }
+
+        $request->session()->put('buy_now', [
+            $product->id => $data['quantity']
+        ]);
+
+        $request->session()->put('checkout_source', 'buy_now');
+
+        return redirect()->route('checkout.index');
+    }
+
+    // XÁC ĐỊNH NGUỒN THANH TOÁN
+    private function cart(Request $request): array
+    {
+        if ($request->session()->get('checkout_source') === 'buy_now') {
+            return $request->session()->get('buy_now', []);
+        }
+
+        return $request->session()->get('cart', []);
+    }
+
+    // TRANG CHECKOUT
+    public function index(Request $request)
+    {
+        /*
+         * Khi người dùng đi từ giỏ hàng qua nút Checkout,
+         * Controller cần biết đó là luồng cart.
+         *
+         * Route cart.index vẫn dùng bình thường.
+         */
+        if ($request->query('source') === 'cart') {
+            $request->session()->put('checkout_source', 'cart');
+            $request->session()->forget('buy_now');
+        }
+
+        $cart = $this->cart($request);
+
+        if (!$cart) {
+            return redirect()->route('cart.index');
+        }
+
+        $items = Product::whereIn('id', array_keys($cart))
+            ->where('status', 'active')
+            ->get();
+
+        if ($items->count() !== count($cart)) {
+            return redirect()->route('cart.index')
+                ->withErrors([
+                    'stock' => 'Beberapa produk tidak tersedia.'
+                ]);
+        }
+
+        foreach ($items as $p) {
+            $p->cart_quantity = (int) $cart[$p->id];
+
+            if ($p->stock < $p->cart_quantity) {
+                return redirect()->route('cart.index')
+                    ->withErrors([
+                        'stock' => 'Stok tidak mencukupi: ' . $p->name
+                    ]);
+            }
+        }
+
+        return view('checkout.index', compact('items'));
+    }
+
+    // XÁC NHẬN ĐẶT HÀNG
+    public function store(Request $request)
+    {
+        $data = $request->validate([
+            'customer_name' => 'required|string|max:150',
+            'phone' => 'required|string|max:30',
+            'address' => 'required|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+            'payment_method' => 'required|in:cod,bank_transfer',
+        ]);
+
+        $cart = $this->cart($request);
+
+        if (!$cart) {
+            return redirect()->route('cart.index');
+        }
+
+        $order = DB::transaction(function () use ($request, $cart, $data) {
+            $total = 0;
+            $details = [];
+
+            ksort($cart);
+
+            foreach ($cart as $id => $qty) {
+                if (
+                    !filter_var($id, FILTER_VALIDATE_INT) ||
+                    (!is_int($qty) && !ctype_digit((string) $qty)) ||
+                    $qty < 1
+                ) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Keranjang tidak valid.'
+                    ]);
+                }
+
+                $product = Product::where('status', 'active')
+                    ->lockForUpdate()
+                    ->find($id);
+
+                if (!$product || $product->stock < $qty) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Produk habis atau stok tidak mencukupi.'
+                    ]);
+                }
+
+                $subtotal = $product->price * $qty;
+                $total += $subtotal;
+                $details[] = [$product, $qty, $subtotal];
+            }
+
+            $order = Order::create([
+                ...$data,
+                'notes' => $data['notes'] ?? null,
+                'user_id' => $request->user()->id,
+                'order_number' => 'UIN'
+                    . now()->format('YmdHis')
+                    . strtoupper(Str::random(6)),
+                'total' => $total,
+                'payment_status' => 'pending',
+                'order_status' => 'pending',
+            ]);
+
+            foreach ($details as [$p, $qty, $subtotal]) {
+                $order->items()->create([
+                    'product_id' => $p->id,
+                    'product_name' => $p->name,
+                    'price' => $p->price,
+                    'quantity' => $qty,
+                    'subtotal' => $subtotal,
+                ]);
+
+                $p->decrement('stock', $qty);
+            }
+
+            return $order;
+        });
+
+        // XÓA ĐÚNG SESSION SAU KHI ĐẶT HÀNG
+        if ($request->session()->get('checkout_source') === 'buy_now') {
+            $request->session()->forget('buy_now');
+        } else {
+            $request->session()->forget('cart');
+        }
+
+        $request->session()->forget('checkout_source');
+
+        return redirect()->route('checkout.success', $order);
+    }
+
+    // TRANG ĐẶT HÀNG THÀNH CÔNG
+    public function success(Request $request, Order $order)
+    {
+        abort_unless(
+            $order->user_id === $request->user()->id,
+            403
+        );
+
+        return view('checkout.success', compact('order'));
+    }
+}

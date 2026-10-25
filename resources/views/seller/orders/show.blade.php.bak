@@ -1,0 +1,854 @@
+
+@extends('layouts.app')
+
+@section('title', 'Detail Pesanan Seller - UIN Mart')
+
+@section('content')
+
+<style>
+.sod-page {
+    max-width: 1000px;
+    width: calc(100% - 32px);
+    margin: 35px auto 65px;
+    color: #30252a;
+}
+
+.sod-header {
+    background: #800e19;
+    padding: 26px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.sod-header h1 {
+    margin: 0 0 8px;
+    color: #ffffff !important;
+    font-size: 26px;
+}
+
+.sod-header p {
+    margin: 0;
+    color: #f8dfe3 !important;
+    font-size: 13px;
+}
+
+.sod-card {
+    background: #ffffff;
+    border: 1px solid #eadfe2;
+    border-radius: 13px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.sod-card h2 {
+    margin: 0 0 18px;
+    font-size: 18px;
+    color: #30252a;
+}
+
+.sod-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.sod-info {
+    padding: 12px 0;
+    border-bottom: 1px solid #f0e8ea;
+}
+
+.sod-info span {
+    display: block;
+    color: #888888;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+
+.sod-info strong {
+    font-size: 14px;
+    color: #30252a;
+    overflow-wrap: anywhere;
+}
+
+.sod-status {
+    display: inline-block;
+    padding: 7px 11px;
+    border-radius: 7px;
+    background: #fff4dd;
+    color: #986000;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.sod-status.processing {
+    background: #eaf2ff;
+    color: #205caa;
+}
+
+.sod-status.shipped {
+    background: #e9f5ff;
+    color: #166083;
+}
+
+.sod-status.completed,
+.sod-status.paid {
+    background: #e8f7ed;
+    color: #14794d;
+}
+
+.sod-status.cancelled,
+.sod-status.failed {
+    background: #f9e9eb;
+    color: #a52e3b;
+}
+
+.sod-table-wrap {
+    overflow-x: auto;
+}
+
+.sod-table {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.sod-table th,
+.sod-table td {
+    padding: 15px;
+    border-bottom: 1px solid #eeeeee;
+    font-size: 13px;
+}
+
+.sod-table th {
+    background: #faf6f7;
+    color: #67565b;
+}
+
+.sod-table td strong {
+    color: #30252a;
+}
+
+.sod-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eeeeee;
+}
+
+.sod-total span {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.sod-total strong {
+    color: #800e19;
+    font-size: 23px;
+}
+
+.sod-note {
+    margin-top: 15px;
+    font-size: 12px;
+    color: #888888;
+    line-height: 1.6;
+}
+
+.sod-btn {
+    display: inline-block;
+    padding: 12px 20px;
+    background: #800e19;
+    color: #ffffff !important;
+    border-radius: 9px;
+    text-decoration: none !important;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.sod-btn:hover {
+    background: #650b14;
+    color: #ffffff !important;
+}
+
+@media (max-width: 650px) {
+    .sod-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sod-card {
+        padding: 17px;
+    }
+
+    .sod-header {
+        padding: 22px;
+    }
+
+    .sod-total strong {
+        font-size: 18px;
+    }
+}
+
+
+/* PROSES PENGIRIMAN SELLER */
+
+.sod-delivery-card {
+    border: 1px solid #ead9dc;
+    background: #ffffff;
+}
+
+.sod-delivery-desc {
+    color: #777777;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 18px;
+}
+
+.sod-delivery-status {
+    display: inline-block;
+    padding: 9px 14px;
+    background: #fff4dd;
+    color: #986000;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.sod-delivery-progress {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin: 22px 0;
+}
+
+.sod-delivery-step {
+    padding: 12px 6px;
+    background: #f6f3f4;
+    border: 1px solid #eee7e8;
+    border-radius: 9px;
+    text-align: center;
+    color: #888888;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.sod-delivery-step.active {
+    background: #800e19;
+    color: #ffffff;
+    border-color: #800e19;
+}
+
+.sod-delivery-step.done {
+    background: #f7e8eb;
+    color: #800e19;
+    border-color: #e8cbd1;
+}
+
+.sod-delivery-action {
+    margin-top: 20px;
+}
+
+.sod-delivery-action form {
+    margin: 0;
+}
+
+.sod-delivery-submit {
+    display: inline-block;
+    padding: 13px 22px;
+    background: #800e19;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.sod-delivery-submit:hover {
+    background: #650b14;
+}
+
+.sod-delivery-alert {
+    padding: 13px 16px;
+    border-radius: 9px;
+    margin-bottom: 18px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.sod-delivery-alert.success {
+    background: #e8f7ed;
+    color: #14794d;
+}
+
+.sod-delivery-alert.error {
+    background: #fff0f1;
+    color: #a32030;
+}
+
+@media (max-width: 650px) {
+    .sod-delivery-progress {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
+</style>
+
+@php
+    $statusLabels = [
+        'pending' => 'Menunggu',
+        'processing' => 'Diproses',
+        'shipped' => 'Dikirim',
+        'completed' => 'Selesai',
+        'cancelled' => 'Dibatalkan',
+    ];
+
+    $paymentLabels = [
+        'pending' => 'Menunggu Pembayaran',
+        'paid' => 'Dibayar',
+        'failed' => 'Gagal',
+    ];
+@endphp
+
+<div class="sod-page">
+
+    <!-- HEADER -->
+    <div class="sod-header">
+        <h1>Detail Pesanan</h1>
+
+        <p>
+            Nomor Pesanan:
+            {{ $order->order_number ?: '#' . $order->id }}
+        </p>
+    </div>
+
+    <!-- INFORMASI PESANAN -->
+    <div class="sod-card">
+        <h2>Informasi Pesanan</h2>
+
+        <div class="sod-grid">
+
+            <div class="sod-info">
+                <span>Nama Pelanggan</span>
+                <strong>{{ $order->customer_name }}</strong>
+            </div>
+
+            <div class="sod-info">
+                <span>Tanggal Pesanan</span>
+                <strong>
+                    {{ $order->created_at?->format('d/m/Y H:i') }}
+                </strong>
+            </div>
+
+            <div class="sod-info">
+                <span>Status Pesanan</span>
+
+                <span class="sod-status {{ $order->order_status }}">
+                    {{ $statusLabels[$order->order_status] ?? $order->order_status }}
+                </span>
+            </div>
+
+            <div class="sod-info">
+                <span>Status Pembayaran</span>
+
+                <span class="sod-status {{ $order->payment_status }}">
+                    {{ $paymentLabels[$order->payment_status] ?? $order->payment_status }}
+                </span>
+            </div>
+
+            <div class="sod-info">
+                <span>Metode Pembayaran</span>
+
+                <strong>
+                    {{ strtoupper(str_replace('_', ' ', $order->payment_method ?? '-')) }}
+                </strong>
+            </div>
+
+            <div class="sod-info">
+                <span>Jumlah Produk Toko</span>
+                <strong>{{ $sellerQuantity }} item</strong>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PRODUK SELLER -->
+    <div class="sod-card">
+        <h2>Produk Toko Anda</h2>
+
+        <div class="sod-table-wrap">
+            <table class="sod-table">
+
+                <thead>
+                    <tr>
+                        <th>Produk</th>
+                        <th>Harga Satuan</th>
+                        <th>Jumlah</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach($sellerItems as $item)
+                        <tr>
+                            <td>
+                                <strong>
+                                    {{ $item->product_name }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                Rp {{ number_format($item->price, 0, ',', '.') }}
+                            </td>
+
+                            <td>
+                                {{ $item->quantity }}
+                            </td>
+
+                            <td>
+                                Rp {{ number_format($item->subtotal, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+
+            </table>
+        </div>
+
+        <div class="sod-total">
+            <span>Subtotal Produk Toko</span>
+
+            <strong>
+                Rp {{ number_format($sellerSubtotal, 0, ',', '.') }}
+            </strong>
+        </div>
+
+        <p class="sod-note">
+            Subtotal ini hanya mencakup produk toko Anda
+            setelah diskon produk.
+            Diskon voucher pesanan belum dialokasikan
+            ke masing-masing penjual.
+            Jumlah ini bukan saldo yang dapat ditarik.
+        </p>
+    </div>
+
+    
+<!-- INFORMASI PENGIRIMAN -->
+<div class="sod-card">
+
+    <h2>Informasi Pengiriman</h2>
+
+    @if($fulfillment)
+
+        @if($fulfillment->delivery_method === 'pickup')
+
+            <div class="sod-info">
+                <span>Metode Pengiriman</span>
+                <strong>Ambil di Kampus</strong>
+            </div>
+
+            <div class="sod-info">
+                <span>Lokasi Pengambilan</span>
+                <strong>
+                    {{ $fulfillment->pickup_location ?: 'Belum ditentukan' }}
+                </strong>
+            </div>
+
+            <p class="sod-note">
+                Koordinasikan waktu dan lokasi pengambilan
+                dengan pembeli sebelum menyerahkan barang.
+            </p>
+
+        @elseif($fulfillment->delivery_method === 'seller_delivery')
+
+            <div class="sod-info">
+                <span>Metode Pengiriman</span>
+                <strong>Diantar Penjual</strong>
+            </div>
+
+            <div class="sod-info">
+                <span>Alamat Pengiriman</span>
+                <strong>
+                    {{ $fulfillment->delivery_address ?: $order->address }}
+                </strong>
+            </div>
+
+            <p class="sod-note">
+                Pastikan alamat dan waktu pengantaran
+                sudah dikonfirmasi dengan pembeli.
+            </p>
+
+        @else
+
+            <div class="sod-info">
+                <span>Metode Pengiriman</span>
+                <strong>Belum ditentukan</strong>
+            </div>
+
+            <p class="sod-note">
+                Pesanan lama belum memiliki metode pengiriman.
+                Hubungi Admin jika memerlukan informasi tambahan.
+            </p>
+
+        @endif
+
+    @else
+
+        <p class="sod-note">
+            Data pengiriman belum tersedia untuk pesanan ini.
+        </p>
+
+    @endif
+
+</div>
+
+
+<!-- JADWAL PENGIRIMAN / PENGAMBILAN -->
+<div class="sod-card">
+
+    <h2>Jadwal Pengiriman / Pengambilan</h2>
+
+    @if(!$fulfillment)
+
+        <p class="sod-note">
+            Data pengiriman belum tersedia.
+        </p>
+
+    @else
+
+        @php
+            $scheduleLabels = [
+                'not_proposed' => 'Belum Diajukan',
+                'proposed' => 'Menunggu Konfirmasi Pembeli',
+                'confirmed' => 'Disetujui Pembeli',
+                'change_requested' => 'Pembeli Meminta Perubahan',
+            ];
+
+            $scheduleEditable =
+                !in_array(
+                    $order->order_status,
+                    ['cancelled', 'completed'],
+                    true
+                )
+                && in_array(
+                    $fulfillment->status,
+                    ['pending', 'confirmed', 'preparing', 'ready'],
+                    true
+                );
+        @endphp
+
+        <div class="sod-info">
+            <span>Status Jadwal</span>
+            <strong>
+                {{ $scheduleLabels[$fulfillment->schedule_status]
+                    ?? $fulfillment->schedule_status }}
+            </strong>
+        </div>
+
+        @if($fulfillment->scheduled_at)
+            <div class="sod-info">
+                <span>Jadwal yang Diajukan</span>
+                <strong>
+                    {{ \Carbon\Carbon::parse($fulfillment->scheduled_at)->format('d/m/Y H:i') }}
+                </strong>
+            </div>
+        @endif
+
+        @if($fulfillment->schedule_note)
+            <div class="sod-info">
+                <span>Catatan Penjual</span>
+                <strong>{{ $fulfillment->schedule_note }}</strong>
+            </div>
+        @endif
+
+        @if($fulfillment->schedule_change_reason)
+            <div class="sod-info">
+                <span>Permintaan Perubahan Pembeli</span>
+                <strong>{{ $fulfillment->schedule_change_reason }}</strong>
+            </div>
+        @endif
+
+        @if($scheduleEditable)
+
+            <form
+                method="POST"
+                action="{{ route('seller.orders.schedule.propose', $order) }}"
+                style="margin-top:20px;"
+            >
+                @csrf
+
+                <div style="margin-bottom:15px;">
+                    <label
+                        for="scheduled_at"
+                        style="display:block;margin-bottom:8px;font-weight:700;"
+                    >
+                        Tanggal dan Jam *
+                    </label>
+
+                    <input
+                        type="datetime-local"
+                        id="scheduled_at"
+                        name="scheduled_at"
+                        value="{{ old('scheduled_at', $fulfillment->scheduled_at ? \Carbon\Carbon::parse($fulfillment->scheduled_at)->format('Y-m-d\TH:i') : '') }}"
+                        required
+                        style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ded6d9;border-radius:9px;"
+                    >
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <label
+                        for="schedule_note"
+                        style="display:block;margin-bottom:8px;font-weight:700;"
+                    >
+                        Catatan untuk Pembeli
+                    </label>
+
+                    <textarea
+                        id="schedule_note"
+                        name="schedule_note"
+                        rows="3"
+                        maxlength="1000"
+                        placeholder="Contoh: Bertemu di depan perpustakaan kampus."
+                        style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #ded6d9;border-radius:9px;"
+                    >{{ old('schedule_note', $fulfillment->schedule_note) }}</textarea>
+                </div>
+
+                @error('scheduled_at')
+                    <p style="color:#b42936;">
+                        {{ $message }}
+                    </p>
+                @enderror
+
+                @error('schedule_note')
+                    <p style="color:#b42936;">
+                        {{ $message }}
+                    </p>
+                @enderror
+
+                <button
+                    type="submit"
+                    class="sod-delivery-submit"
+                >
+                    Ajukan Jadwal
+                </button>
+
+            </form>
+
+        @else
+
+            <p class="sod-note">
+                Jadwal tidak dapat diubah pada tahap pengiriman ini.
+            </p>
+
+        @endif
+
+    @endif
+
+</div>
+
+    
+<!-- PROSES PENGIRIMAN -->
+<div class="sod-card sod-delivery-card">
+
+    <h2>Proses Pengiriman</h2>
+
+    <p class="sod-delivery-desc">
+        Kelola pesanan toko Anda secara bertahap.
+        Pembeli akan melakukan konfirmasi setelah
+        barang diterima.
+    </p>
+
+    <!-- PESAN SUKSES -->
+    @if(session('success'))
+        <div class="sod-delivery-alert success">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    <!-- PESAN ERROR -->
+    @if($errors->any())
+        <div class="sod-delivery-alert error">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
+        </div>
+    @endif
+
+    @if(!$fulfillment)
+
+        <div class="sod-delivery-alert error">
+            Data pengiriman belum tersedia untuk
+            pesanan ini. Hubungi Admin untuk
+            pemeriksaan pesanan lama.
+        </div>
+
+    @else
+
+        @php
+            $deliveryLabels = [
+                'pending' => 'Menunggu Konfirmasi',
+                'confirmed' => 'Dikonfirmasi',
+                'preparing' => 'Sedang Dipersiapkan',
+                'ready' => 'Siap Dikirim / Diambil',
+                'delivering' => 'Dalam Pengiriman',
+                'handed_over' => 'Menunggu Konfirmasi Pembeli',
+                'completed' => 'Selesai',
+                'cancelled' => 'Dibatalkan',
+            ];
+
+            $deliverySteps = [
+                'pending',
+                'confirmed',
+                'preparing',
+                'ready',
+                'handed_over',
+                'completed',
+            ];
+
+            $currentStep = array_search(
+                $fulfillment->status,
+                $deliverySteps,
+                true
+            );
+
+            $actions = [
+                'pending' => [
+                    'route' => 'seller.orders.confirm',
+                    'label' => 'Konfirmasi Pesanan',
+                ],
+                'confirmed' => [
+                    'route' => 'seller.orders.prepare',
+                    'label' => 'Siapkan Produk',
+                ],
+                'preparing' => [
+                    'route' => 'seller.orders.ready',
+                    'label' => 'Produk Siap Dikirim',
+                ],
+                'ready' => [
+                    'route' => 'seller.orders.handover',
+                    'label' => 'Barang Sudah Diserahkan',
+                ],
+            ];
+
+            $currentAction = $actions[$fulfillment->status] ?? null;
+        @endphp
+
+        <div class="sod-info">
+            <span>Status Pengiriman</span>
+
+            <div class="sod-delivery-status">
+                {{ $deliveryLabels[$fulfillment->status]
+                    ?? $fulfillment->status }}
+            </div>
+        </div>
+
+        <div class="sod-delivery-progress">
+
+            @foreach($deliverySteps as $index => $step)
+
+                @php
+                    $stepClass = '';
+
+                    if ($currentStep !== false) {
+                        if ($index < $currentStep) {
+                            $stepClass = 'done';
+                        } elseif ($index === $currentStep) {
+                            $stepClass = 'active';
+                        }
+                    }
+                @endphp
+
+                <div class="sod-delivery-step {{ $stepClass }}">
+                    {{ $deliveryLabels[$step] }}
+                </div>
+
+            @endforeach
+
+        </div>
+
+        @if($order->order_status === 'cancelled')
+
+            <div class="sod-delivery-alert error">
+                Pesanan ini telah dibatalkan oleh Admin.
+                Proses pengiriman tidak dapat dilanjutkan.
+            </div>
+
+        @elseif($order->order_status === 'completed')
+
+            <div class="sod-delivery-alert success">
+                Pesanan utama telah ditandai selesai.
+                Perubahan pengiriman harus diperiksa
+                oleh Admin.
+            </div>
+
+        @elseif($fulfillment->status === 'completed')
+
+            <div class="sod-delivery-alert success">
+                Pengiriman selesai.
+                Barang telah dikonfirmasi diterima
+                oleh pembeli.
+            </div>
+
+        @elseif($fulfillment->status === 'handed_over')
+
+            <div class="sod-delivery-alert success">
+                Barang sudah ditandai diserahkan.
+                Menunggu pembeli melakukan konfirmasi
+                penerimaan.
+            </div>
+
+        @elseif($fulfillment->status === 'cancelled')
+
+            <div class="sod-delivery-alert error">
+                Pengiriman ini telah dibatalkan.
+            </div>
+
+        @elseif($currentAction)
+
+            <div class="sod-delivery-action">
+
+                <form
+                    action="{{ route($currentAction['route'], $order) }}"
+                    method="POST"
+                >
+                    @csrf
+
+                    <button
+                        type="submit"
+                        class="sod-delivery-submit"
+                        onclick="return confirm('Lanjutkan proses pesanan ini?')"
+                    >
+                        {{ $currentAction['label'] }}
+                    </button>
+                </form>
+
+            </div>
+
+        @else
+
+            <p class="sod-delivery-desc">
+                Tidak ada tindakan Seller yang tersedia
+                untuk status pengiriman ini.
+            </p>
+
+        @endif
+
+    @endif
+
+</div>
+
+
+    <!-- KEMBALI -->
+    <a
+        class="sod-btn"
+        href="{{ route('seller.orders.index') }}"
+    >
+        ← Kembali ke Pesanan Masuk
+    </a>
+
+</div>
+
+@endsection

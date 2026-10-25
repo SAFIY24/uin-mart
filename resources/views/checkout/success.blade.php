@@ -1,0 +1,2 @@
+@extends('layouts.app')
+@section('content')<section class="panel center"><h1>Pesanan Berhasil Dibuat!</h1><p>Nomor pesanan: <strong>{{$order->order_number}}</strong></p><p>Total: Rp {{number_format($order->total,0,',','.')}}</p><p>Status pembayaran: {{$order->payment_status}}</p><a class="btn" href="{{route('home')}}">Kembali Belanja</a></section>@endsection

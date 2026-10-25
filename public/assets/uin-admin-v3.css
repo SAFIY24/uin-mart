@@ -1,0 +1,313 @@
+
+/* =====================================================
+   UIN MART - ADMIN V3
+   Logo, Sidebar, Header, Product Form
+   Load after uin-admin-dashboard.css
+   ===================================================== */
+
+/* ===== LOGO ===== */
+
+.ua-admin-body .ua-brand-logo {
+    display: block;
+    flex-shrink: 0;
+    object-fit: contain;
+    max-width: none;
+    height: auto;
+}
+
+.ua-admin-body .ua-brand-logo-sidebar {
+    width: 52px;
+    height: 52px;
+}
+
+.ua-admin-body .ua-brand-logo-topbar {
+    width: 42px;
+    height: 42px;
+}
+
+/* ===== SIDEBAR ===== */
+
+.ua-admin-body .ua-side-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    min-width: 0;
+}
+
+.ua-admin-body .ua-side-heading .ua-brand-label {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ua-admin-body .ua-side-heading .ua-brand-label strong {
+    white-space: nowrap;
+    letter-spacing: .025em;
+}
+
+.ua-admin-body .ua-side-heading .ua-brand-label small {
+    letter-spacing: .12em;
+}
+
+.ua-admin-body .ua-nav-item {
+    transition: background-color .18s ease,
+                transform .18s ease;
+}
+
+.ua-admin-body .ua-nav-item:not(.ua-nav-disabled):hover {
+    transform: translateX(2px);
+}
+
+.ua-admin-body .ua-sidebar {
+    min-width: 0;
+}
+
+/* ===== HEADER ===== */
+
+.ua-admin-body .ua-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ua-admin-body .ua-topbar-brand > span {
+    white-space: nowrap;
+}
+
+.ua-admin-body .ua-topbar {
+    gap: 18px;
+}
+
+.ua-admin-body .ua-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.ua-admin-body .ua-topbar-right form {
+    margin: 0;
+}
+
+/* ===== MAIN CONTENT ===== */
+
+.ua-admin-body .ua-main,
+.ua-admin-body .ua-workspace {
+    min-width: 0;
+}
+
+.ua-admin-body .ua-stat,
+.ua-admin-body .ua-panel {
+    box-shadow: 0 4px 20px rgba(75,36,43,.035);
+}
+
+.ua-admin-body .ua-table-scroll {
+    overflow-x: auto;
+}
+
+/* =====================================================
+   PRODUCT FORM FIX
+   Tambah Produk / Edit Produk
+   ===================================================== */
+
+.ua-admin-body .ua-product-form-page {
+    width: 100%;
+    max-width: 1250px;
+    min-width: 0;
+}
+
+/* Khung form */
+
+.ua-admin-body .ua-product-form-page .ua-form-card {
+    width: 100%;
+    min-width: 0;
+    padding: 28px;
+    box-sizing: border-box;
+}
+
+/* Form tổng thể */
+
+.ua-admin-body .ua-product-form-page form {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Hai cột: form và ảnh preview */
+
+.ua-admin-body .ua-product-form-page .ua-product-form-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 24px;
+    align-items: start;
+}
+
+/* Các nhóm trường */
+
+.ua-admin-body .ua-product-form-page .ua-form-group,
+.ua-admin-body .ua-product-form-page .ua-form-field {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+/* Nhãn */
+
+.ua-admin-body .ua-product-form-page label {
+    display: block;
+    margin: 0 0 6px;
+    color: #49383c;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* Các ô nhập liệu */
+
+.ua-admin-body .ua-product-form-page input:not([type="checkbox"]):not([type="hidden"]),
+.ua-admin-body .ua-product-form-page select,
+.ua-admin-body .ua-product-form-page textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 11px 13px;
+    margin: 0;
+
+    box-sizing: border-box;
+    background: #ffffff;
+    border: 1px solid #e4dce0;
+    border-radius: 9px;
+
+    color: #30282c;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Mô tả sản phẩm */
+
+.ua-admin-body .ua-product-form-page textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Hiệu ứng khi nhập liệu */
+
+.ua-admin-body .ua-product-form-page input:focus,
+.ua-admin-body .ua-product-form-page select:focus,
+.ua-admin-body .ua-product-form-page textarea:focus {
+    outline: none;
+    border-color: #800e19;
+    box-shadow: 0 0 0 3px rgba(128,14,25,.08);
+}
+
+/* Chọn hình sản phẩm */
+
+.ua-admin-body .ua-product-form-page input[type="file"] {
+    min-height: 46px;
+    height: auto;
+    padding: 9px;
+}
+
+/* Thông tin hướng dẫn */
+
+.ua-admin-body .ua-product-form-page small,
+.ua-admin-body .ua-product-form-page .ua-form-help {
+    color: #92868a;
+    font-size: 11px;
+}
+
+/* Khung xem ảnh */
+
+.ua-admin-body .ua-product-form-page .ua-product-preview {
+    width: 100%;
+    min-width: 0;
+}
+
+.ua-admin-body .ua-product-form-page .ua-product-preview img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Nút lưu và hủy */
+
+.ua-admin-body .ua-product-form-page .ua-form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+/* Nút chính */
+
+.ua-admin-body .ua-product-form-page button[type="submit"] {
+    min-height: 42px;
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 9px;
+    background: #800e19;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.ua-admin-body .ua-product-form-page button[type="submit"]:hover {
+    background: #660b14;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 900px) {
+    .ua-admin-body .ua-product-form-page .ua-product-form-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .ua-admin-body .ua-brand-logo-sidebar {
+        width: 42px;
+        height: 42px;
+    }
+
+    .ua-admin-body .ua-brand-logo-topbar {
+        width: 34px;
+        height: 34px;
+    }
+
+    .ua-admin-body .ua-topbar {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .ua-admin-body .ua-topbar-right {
+        gap: 10px;
+    }
+
+    .ua-admin-body .ua-topbar-brand > span {
+        font-size: 13px;
+    }
+
+    .ua-admin-body .ua-product-form-page .ua-form-card {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ua-admin-body .ua-product-form-page .ua-form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
