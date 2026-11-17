@@ -81,14 +81,14 @@
                     aria-label="Akun dan keranjang"
                 >
 
-                    <span class="mart-greeting">
+                    <a class="mart-greeting" href="{{ route('profile.edit') }}" style="text-decoration:none;color:inherit;">
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="8" r="4"/>
                             <path d="M4 21c0-5 3-8 8-8s8 3 8 8"/>
                         </svg>
 
                         Halo, {{ auth()->user()->username }}
-                    </span>
+                    </a>
 
                     @if(auth()->user()->role === 'admin')
                         <a

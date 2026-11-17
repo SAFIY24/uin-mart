@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\ReportController;
 
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\SellerOrderController;
+use App\Http\Controllers\ProfileController;
 
 
 /*
@@ -138,6 +139,26 @@ Route::middleware('auth')->group(function () {
         'logout'
     ])->name('logout');
 
+        /*
+    |--------------------------------------------------------------------------
+    | PENGATURAN PROFIL
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/profil-saya', [
+        ProfileController::class,
+        'edit'
+    ])->name('profile.edit');
+
+    Route::put('/profil-saya', [
+        ProfileController::class,
+        'update'
+    ])->name('profile.update');
+
+    Route::put('/profil-saya/kata-sandi', [
+        ProfileController::class,
+        'updatePassword'
+    ])->name('profile.password');
 
     /*
     |--------------------------------------------------------------------------
