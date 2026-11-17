@@ -192,6 +192,11 @@ Route::middleware('auth')->group(function () {
         'applyVoucher'
     ])->name('checkout.voucher.apply');
 
+    Route::get('/pesanan/{order}/pembayaran', [
+        CheckoutController::class,
+        'showQris'
+    ])->name('checkout.qris');
+
     Route::get('/pesanan/{order}', [
         CheckoutController::class,
         'success'
