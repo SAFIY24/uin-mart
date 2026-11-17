@@ -389,6 +389,12 @@
 
                         </option>
 
+                        <option
+                            value="qris"
+                            @selected(old('payment_method')==='qris' )>
+                            QRIS — Pembayaran melalui QR Code
+                        </option>
+
                     </select>
 
                     @error('payment_method')

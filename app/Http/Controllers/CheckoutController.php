@@ -8,6 +8,8 @@ use App\Models\SellerApplication;
 use App\Services\ProductPricing;
 use App\Services\VoucherService;
 use App\Services\OrderPaymentAllocationService;
+use App\Models\PaymentTransaction;
+use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -629,6 +631,38 @@ if ($hasAdminItems) {
             ->route('checkout.success', $order);
     }
 
+    if ($order->payment_method === 'qris') {
+
+            try {
+
+                $payment = $midtransService->createQris($order);
+
+                $paymentTransaction = PaymentTransaction::create([
+                    'order_id' => $order->id,
+                    'provider' => 'midtrans',
+                    'provider_order_id' => $payment['order_id'],
+                    'provider_transaction_id' => $payment['transaction_id'],
+                    'payment_type' => 'qris',
+                    'status' => $payment['transaction_status'],
+                    'gross_amount' => (int) $payment['gross_amount'],
+                    'currency' => $payment['currency'],
+                    'qr_url' => $payment['qr_url'],
+                    'response_data' => $payment['response_data'],
+                ]);
+                return redirect()->route('checkout.qris', $order);
+            } catch (\Throwable $e) {
+
+                report($e);
+
+                return redirect()
+                    ->route('checkout.success', $order)
+                    ->with(
+                        'payment_error',
+                        'Pesanan berhasil dibuat, tetapi QRIS belum berhasil dibuat. Silakan hubungi admin untuk melanjutkan pembayaran.'
+                    );
+            }
+        }
+
     /*
     |--------------------------------------------------------------------------
     | HALAMAN PESANAN BERHASIL
@@ -647,6 +681,34 @@ if ($hasAdminItems) {
 
         return view('checkout.success', compact('order'));
     }
+
+public function showQris(
+        Request $request,
+        Order $order
+    ) {
+        // Memastikan pesanan milik pengguna yang sedang login.
+        abort_unless(
+            (int) $order->user_id === (int) $request->user()->id,
+            403
+        );
+
+        // Mengambil transaksi QRIS berdasarkan pesanan.
+        $paymentTransaction = PaymentTransaction::where(
+            'order_id',
+            $order->id
+        )
+            ->where('provider', 'midtrans')
+            ->where('payment_type', 'qris')
+            ->latest()
+            ->firstOrFail();
+
+        // Menampilkan halaman pembayaran QRIS.
+        return view('checkout.qris', compact(
+            'order',
+            'paymentTransaction'
+        ));
+    }
+
 
     /*
     |--------------------------------------------------------------------------
