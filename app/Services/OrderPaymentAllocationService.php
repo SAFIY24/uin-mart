@@ -155,7 +155,7 @@ class OrderPaymentAllocationService
 
             if (!in_array(
                 $paymentMethod,
-                ['cod', 'bank_transfer'],
+                ['cod', 'bank_transfer', 'qris'],
                 true
             )) {
                 throw ValidationException::withMessages([
